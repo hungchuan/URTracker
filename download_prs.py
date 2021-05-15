@@ -11,27 +11,105 @@ import pandas as pd
 import pygsheets
 import numpy as np
 import shutil 
+import pdb
+from selenium import webdriver
+from selenium.webdriver.support.select import Select
+
+#from datetime import datetime, date, timedelta
+
+from print_log import log_print,Emptyprintf
 
 #PROJECT_IDS = [1429]
 # PROJECT_IDS = [712, 746, 750]
 
 ALL_PROBLEMS = "/media/sf_linux-share/all.txt"
-PROBLEM = "~/Downloads/ProblemList.xls"
+#PROBLEM = "~/Downloads/ProblemList.xls"
+PROBLEM = "ProblemList.xls"
 
 def DF2List(df_in):
     train_data = np.array(df_in)#np.ndarray()
     df_2_list=train_data.tolist()#list
     return df_2_list
+
+def waiting_for_update(br,xpath):
+    button = False
+    for i in range(0,10):
+        time.sleep(1) 
+        print ('waiting for update Count: %d' % i)
+        try:
+            button = br.find_element_by_xpath(xpath)
+        except:
+            continue
+        break
+    print(xpath)
+    print("waiting_for_update button=",button)
+    return button    
+
+def download_from_google(file, sheet):
+
+    try:
+        gc = pygsheets.authorize(service_file='PythonUpload-cfde37284cdc.json')
+    except:
+        log("can not find json file")
     
-def download_issues (br, proj, filename):
+    sh = gc.open(file)
+
+    try:
+        wks = sh.worksheet_by_title(sheet)
+    except:
+        wks = sh.add_worksheet(sheet,rows=1,cols=30,index=0)    
+     
+    df = wks.get_as_df()   
+    return df    
+
+def upload_to_google(file, sheet, TCA_df):
+    try:
+        gc = pygsheets.authorize(service_file='PythonUpload-cfde37284cdc.json')
+    except:
+        return filename
+    
+    sh = gc.open(file)
+
+    try:
+        wks = sh.worksheet_by_title(sheet)
+    except:
+        wks = sh.add_worksheet(sheet,rows=1,cols=30,index=0)    
+     
+    wks.set_dataframe(TCA_df, (1, 1))
+
+    return wks        
+    
+def download_issues (br, proj, filename,directory,config):
+
+    print ('= %s' % directory)
+    print ('filename= %s' % filename)
+    ProblemList_name = os.path.join(directory,filename)
+    print ('ProblemList_name= %s' % ProblemList_name)
+    
     print('proj=',proj)
     #proj = int(proj)
     print('Downloading issues for project: %d' % (proj))
     print('urt=', URT.URTRACKER_URL + "/Pts/issuelist.aspx?project=%d" % proj)
     
-    br.visit (URT.URTRACKER_URL + "/Pts/issuelist.aspx?project=%d" % proj)
+    #sel = input("pause 58")    
     
-    project = br.find_by_xpath('//*[@id="ctl00_pnlHeader"]/table/tbody/tr/td')
+    #br.visit (URT.URTRACKER_URL + "/Pts/issuelist.aspx?project=%d" % proj)
+    #br.get(URT.URTRACKER_URL + "/Pts/issuelist.aspx?project=%d" % proj)
+    #sel = input("pause 62")    
+    
+    result_info = waiting_for_update(br,config ['xpath_mylist'])    
+    print (result_info.text)
+    while (result_info.text != "我的事務"):
+        print (result_info.text)
+        #count += 1
+        time.sleep (1)
+        result_info = waiting_for_update(br,config ['xpath_mylist'])    
+    
+    br.get (URT.URTRACKER_URL + "/Pts/issuelist.aspx?project=%d" % proj)
+    
+    time.sleep(5)  
+         
+    project = waiting_for_update(br,config ['xpath_project'])
     project_name = project.text
     print('project_name = ',project_name)
     name_find= project_name.find('項目列表 »')
@@ -41,102 +119,76 @@ def download_issues (br, proj, filename):
     print('gh_name =',gh_name)
     newfilename = gh_name+'.xls'
     print('newfilename =',newfilename)
-    
-    result_info = br.find_by_xpath('//*[@id="ctl00_CP1_lblResultInfo"]')
-    print('result_info = ',result_info.text)
-    
-    button= br.find_by_text('所有').click() #click 所有    
-    #button = br.find_by_xpath('//*[@id="ctl00_CP1_tvNavt11"]').click() #click 所有
-    #URT.wait_for_xpath (br, '//*[@id="ctl00_CP1_tvNavt11"]')
-    
-    count = 0
-    result_info = br.find_by_xpath('//*[@id="ctl00_CP1_lblResultInfo"]')
-
-    while (result_info.text != '所有事務'):
-        print ('waiting for update Count: %d' % count)
-        count += 1
-        time.sleep (1)
-        result_info = br.find_by_xpath('//*[@id="ctl00_CP1_lblResultInfo"]')
-
-        
-    button= br.find_by_text('導出').click() #click 導出    
-    #button = br.find_by_xpath('//*[@id="ctl00_CP1_lnkExport"]').click()#click 導出
-    #URT.wait_for_xpath (br, '//*[@id="ctl00_CP1_lnkExport"]')
-
-    #URT.wait_for_xpath (br, "//*[@id='ctl00_CP1_lnkExport']")
-    
-    filename = os.path.expanduser (filename)
-    print('filename_aaa = ',filename)
-    
-    if (os.path.isfile(filename)==True):
-        print('remove file')
-        os.remove(filename)
-    
-    time.sleep(1) 
-    #URT.wait_for_xpath (br, "//*[@class='ctl00_CP1_tvNav_0']")
-    # //*[@id="ctl00_CP1_btnExport"]
-    
    
-    #br.find_by_xpath ('//*[@id="ctl00_CP1_btnExport"]').first.click ()
+    button = br.find_element_by_partial_link_text("所有")
+    button.click() #All     
 
-    #URT.wait_for_xpath (br, '//*[@id="ctl00_CP1_btnExport"]')
-
-    #filename = os.path.expanduser (filename)
-    #print('filename = ',filename)
-    #if os.path.exists (filename):
-    #    os.unlink (filename)
-
-
-    
-    count = 0
-    result_info = br.find_by_xpath('//*[@id="ctl00_CP1_Label1"]')
-
-    while (result_info.text != '導出事務列表'):
-        print ('waiting for update Count: %d' % count)
-        count += 1
+    result_info = waiting_for_update(br,config ['xpath_all_str'])
+    while (result_info.text != "所有事務"):
+        print (result_info.text)
         time.sleep (1)
-        result_info = br.find_by_xpath('//*[@id="ctl00_CP1_Label1"]')
-
+        result_info = waiting_for_update(br,config ['xpath_all_str'])    
         
-    #br.find_by_xpath ('//*[@id="ctl00_CP1_btnExport"]').first.click ()
-    br.find_by_xpath ('//*[@id="ctl00_CP1_btnExport"]').click () #click 導出
-    #URT.wait_for_xpath (br, '//*[@id="ctl00_CP1_btnExport"]')
-    #print('filename111 = ',filename)
-    #time.sleep(2) 
-    #filename = URT.complete_download (filename, proj)
+    button = waiting_for_update(br,config ['xpath_export'])
+    button.click() #export     
     
+    result_info = waiting_for_update(br,config ['xpath_export_list'])
+    while (result_info.text != "導出事務列表"):
+        print (result_info.text)
+        time.sleep (1)
+        result_info = waiting_for_update(br,config ['xpath_export_list'])
+        
+    button = waiting_for_update(br,config ['xpath_download'])    
+    button.click() #download
+    time.sleep(1)  
+
     count = 0
-    while (os.path.exists (filename) == False):
+    while (os.path.exists (ProblemList_name) == False):
         print ('waiting for download Count: %d' % count)
         count += 1
         time.sleep (1)
     
+    URT_df = pd.DataFrame(columns=['#','事務編碼','待辦人','狀態','Subject','Symptom category','Priority','Designer priority','Module','Severity','CS Priority','SWQE suggest priority fix','Actual Domain Owner'])
     
-    df = pd.read_excel(filename)
-    new_df=df.fillna(0)
+    df = pd.read_excel(ProblemList_name)
+    #new_df=df.fillna(0)
+
+    df_column=URT_df.columns.values.tolist()
+    
+    for i in df_column:
+        try:
+            URT_df[i]=df[i] 
+            print('Try OK',i)
+        except:
+            print('Try NOK',i)
+    
+    new_URT_df=URT_df.fillna("")
     
     print('newfilename = ',newfilename)
     PACKAGE_DIRECTORY = os.path.abspath('.')
     newfilename = os.path.join(PACKAGE_DIRECTORY,newfilename)
     print('newfilename222 = ',newfilename)
-    shutil.move(filename,newfilename) 
+    
+    if (os.path.isfile (newfilename)):
+        try:
+            os.remove(newfilename)
+        except OSError as e:
+            print(e)
+        else:
+            print("File is deleted successfully")
+    
+    shutil.move(ProblemList_name,newfilename) 
     #new_df.to_excel(newfilename)
     
-    try:
-        gc = pygsheets.authorize(service_file='PythonUpload-cfde37284cdc.json')
-    except:
-        return filename
+    current_df=download_from_google(gh_name,gh_name) 
+    df_zero=current_df.copy()
+    for col in df_zero.columns: 
+        df_zero[col]="" 
+    upload_to_google(gh_name,gh_name,df_zero) # upload to google sheet    
+    time.sleep(3)  
+    upload_to_google(gh_name,gh_name,new_URT_df) # upload to google sheet       
     
-    sh = gc.open('URTracker')
-
-    try:
-        wks = sh.worksheet_by_title(gh_name)
-    except:
-        wks = sh.add_worksheet(gh_name,rows=9000,cols=100,index=0)    
-     
-    wks.set_dataframe(new_df, (1, 1))
-    
-    return filename
+    return newfilename
    
 '''    
     elem = None
@@ -207,18 +259,79 @@ def combine_problems (prdataset, target):
             tf.write (SEP)
         tf.write ("\n");
 
-
-def main (args):
-    urtracker_config = 'urtracker_config'
-    print('args = ',args)
+def file_download (directory,config):
     projdata = []
-    #print('args [1] = ',args [1])
-    config = URT.read_config (urtracker_config)
-    #br = splinter.Browser ('chrome', profile=config ['chrome_profile_path'])
-    br = splinter.Browser(driver_name='chrome')
-
-    URT.login (br, config ['username'], config ['password'])
     
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
+    else:       
+        # 使用 try 建立目錄
+        try:
+            os.makedirs(directory)
+        # 檔案已存在的例外處理
+        except FileExistsError:
+            print("目錄已存在。")    
+    
+
+    single_pr= config
+    config = 'config'
+    
+    config = URT.read_config (config)   
+    
+    if single_pr!='config':
+        config ['project_ids'] = single_pr
+        
+	
+    options = webdriver.ChromeOptions()
+    prefs = {'profile.default_content_settings.popups': 0, 'download.default_directory': directory}
+    options.add_experimental_option('prefs', prefs)
+    #br = webdriver.Chrome(executable_path='D:\Python\Python37-32\chromedriver.exe', chrome_options=options)
+    
+    if (os.path.isfile ('c:\chromedriver.exe')):
+        print('c:\chromedriver.exe')
+        br = webdriver.Chrome(executable_path='c:\chromedriver.exe', options=options)
+    else:
+        print('False')    
+        br = webdriver.Chrome(options=options)
+    
+    URT.login (br, config)
+    
+    PROJECT_IDS_str = config ['project_ids']
+    print('PROJECT_IDS_str =',PROJECT_IDS_str)
+    PROJECT_IDS = [int(s) for s in PROJECT_IDS_str.split() if s.isdigit()]
+    print('PROJECT_IDS =',PROJECT_IDS)
+    #time.sleep(10) 
+    all_problems = os.path.expanduser (ALL_PROBLEMS)
+    print('all_problems = ',all_problems)
+    
+    for prjid in PROJECT_IDS:
+        projdata.append (download_issues (br, prjid, PROBLEM,directory,config))
+
+    br.quit ()
+    return True  
+      
+        
+def main (args):
+    global log
+    config = 'config'
+    print('args = ',args)
+    args_len = len(args)
+    
+    if (args_len==2):     
+        if (args[1]=="debug"):
+            log = log_print
+        else:
+            log = Emptyprintf
+            config = args[1]
+
+        
+    CURRENT_PACKAGE_DIRECTORY = os.path.abspath('.')    
+    PACKAGE_DIRECTORY = CURRENT_PACKAGE_DIRECTORY + '\download' 
+    Backup_DIRECTORY = CURRENT_PACKAGE_DIRECTORY + '\\backup' 
+    
+    download_file = file_download(PACKAGE_DIRECTORY,config) #下載URT檔案
+    
+'''    
     PROJECT_IDS_str = config ['project_ids']
     print('PROJECT_IDS_str =',PROJECT_IDS_str)
     PROJECT_IDS = [int(s) for s in PROJECT_IDS_str.split() if s.isdigit()]
@@ -234,6 +347,6 @@ def main (args):
     #print ('all projects combined into file: %s' % (all_problems))
 
     br.quit ()
-
+'''
 if __name__ == '__main__':
     main (sys.argv)

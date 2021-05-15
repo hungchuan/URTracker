@@ -23,15 +23,17 @@ import xlrd
 
 URTRACKER_URL="https://fwtrack.tpv-tech.com"
 
-def login (br, username, password):
+def login (br, config):
     print ('Entering Login')
-    br.visit (URTRACKER_URL + "/Accounts/Login.aspx")
-    br.fill ("txtEmail", username)
-    br.fill ("txtPassword", password)
-    br.find_by_name ("btnLogin").first.click ()
-    br.is_element_present_by_xpath ('//*[@id="ctl00_Siteheader1_lblGreeting"]', wait_time = 10)
+    br.get (URTRACKER_URL + "/Accounts/Login.aspx")
+    elem_user = br.find_element_by_xpath(config ['xpath_username'])
+    elem_user.send_keys(config ['username']) #瀏覽器版本不匹配的時候這裡可能報錯
+    elem_pwd = br.find_element_by_xpath(config ['xpath_password'])
+    elem_pwd.send_keys(config ['password'])
+    button = br.find_element_by_xpath(config ['xpath_log_in'])   
+    button.click()
     print ('Leaving Login')
-
+    
 
 def read_config (config):
     print('read_config')
@@ -39,7 +41,7 @@ def read_config (config):
     configs = open (config).readlines ()
     print('configs = ',configs)
     for config in configs:
-        (k,v) = config.split ("=")
+        (k,v) = config.split ("==")
         if "USERNAME" == k.strip ():
             retmap ['username'] = v.strip ()
         if "PASSWORD" == k.strip ():
@@ -47,7 +49,28 @@ def read_config (config):
         if "MOZILLA_PROFILE_PATH" == k.strip ():
             retmap ['mozilla_profile_path'] = v.strip ()
         if "PROJECT_IDS" == k.strip ():
-            retmap ['project_ids'] = v.strip ()
+            retmap ['project_ids'] = v.strip ()            
+        if "XPath_username" == k.strip ():
+            retmap ['xpath_username'] = v.strip ()            
+        if "XPath_password" == k.strip ():
+            retmap ['xpath_password'] = v.strip ()             
+        if "XPath_log_in" == k.strip ():
+            retmap ['xpath_log_in'] = v.strip ()    
+        if "XPath_mylist" == k.strip ():
+            retmap ['xpath_mylist'] = v.strip ()                        
+        if "XPath_all" == k.strip ():
+            retmap ['xpath_all'] = v.strip ()                 
+        if "XPath_project" == k.strip ():
+            retmap ['xpath_project'] = v.strip ()               
+        if "XPath_export" == k.strip ():
+            retmap ['xpath_export'] = v.strip ()    
+        if "XPath_export_list" == k.strip ():
+            retmap ['xpath_export_list'] = v.strip () 
+        if "XPath_download" == k.strip ():
+            retmap ['xpath_download'] = v.strip ()          
+        if "XPath_all_str" == k.strip ():
+            retmap ['xpath_all_str'] = v.strip ()                       
+            
     return retmap
     
 
