@@ -47,10 +47,19 @@ def waiting_for_update(br,xpath):
 
 def download_from_google(file, sheet):
 
+    JSON_DIRECTORY = os.path.abspath('.')    
+
+    JSON_name = os.path.join(JSON_DIRECTORY,'PythonUpload-cfde37284cdc.json')
+    print ('JSON_name= %s' % JSON_name)
+
+    #gc = pygsheets.authorize(service_file=JSON_name)
+    #gc = pygsheets.authorize()
+    
     try:
-        gc = pygsheets.authorize(service_file='PythonUpload-cfde37284cdc.json')
+        gc = pygsheets.authorize(service_file=JSON_name)
+        #gc = pygsheets.authorize(service_file='PythonUpload-cfde37284cdc.json')
     except:
-        log("can not find json file")
+        print("can not find json file")
     
     sh = gc.open(file)
 
@@ -316,6 +325,8 @@ def main (args):
     config = 'config'
     print('args = ',args)
     args_len = len(args)
+    
+    log = Emptyprintf
     
     if (args_len==2):     
         if (args[1]=="debug"):
